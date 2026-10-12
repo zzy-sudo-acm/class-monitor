@@ -1,0 +1,5 @@
+.impeccable/
+test-results/
+node_modules/
+*.log
+*.backup.json

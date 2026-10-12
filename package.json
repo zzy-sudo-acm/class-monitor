@@ -1,0 +1,10 @@
+{
+  "name": "class-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "班级收交登记，支持姓名搜索、男女分类和名单导出",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node --test tests/core.test.cjs"
+  }
+}
