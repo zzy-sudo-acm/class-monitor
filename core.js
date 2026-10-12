@@ -82,6 +82,49 @@
   function makeTask(state, title, dueDate = '') {
     return { id: uid(), title: title.trim(), dueDate, createdAt: new Date().toISOString(), archived: false, studentIds: state.students.filter(s => !s.archived).map(s => s.id), submitted: {} };
   }
+  function removeTask(state, id) {
+    const next = structuredClone(state), index = next.tasks.findIndex(t => t.id === id);
+    if (index < 0) throw new Error('这个事项已被删除，请刷新后重试。');
+    const [task] = next.tasks.splice(index, 1);
+    if (next.activeTaskId === id) next.activeTaskId = next.tasks.find(t => !t.archived)?.id || next.tasks[0]?.id || null;
+    return { state: next, deleted: { kind: 'task', task, index } };
+  }
+  function removeStudent(state, id) {
+    const next = structuredClone(state), index = next.students.findIndex(s => s.id === id);
+    if (index < 0) throw new Error('这位同学已被删除，请刷新后重试。');
+    const [student] = next.students.splice(index, 1), memberships = [];
+    next.tasks.forEach(t => {
+      const position = t.studentIds.indexOf(id);
+      if (position >= 0) memberships.push({ taskId: t.id, position, submitted: t.submitted[id] || null });
+      t.studentIds = t.studentIds.filter(member => member !== id);
+      delete t.submitted[id];
+    });
+    return { state: next, deleted: { kind: 'student', student, index, memberships } };
+  }
+  function restoreDeleted(state, deleted) {
+    const next = structuredClone(state);
+    if (deleted.kind === 'task') {
+      if (next.tasks.some(t => t.id === deleted.task.id)) throw new Error('这个事项已经恢复。');
+      const task = structuredClone(deleted.task), ids = new Set(next.students.map(s => s.id));
+      task.studentIds = task.studentIds.filter(id => ids.has(id));
+      task.submitted = Object.fromEntries(Object.entries(task.submitted).filter(([id]) => ids.has(id)));
+      next.tasks.splice(Math.min(deleted.index, next.tasks.length), 0, task);
+      next.activeTaskId = task.id;
+    } else if (deleted.kind === 'student') {
+      const student = structuredClone(deleted.student);
+      if (next.students.some(s => s.id === student.id)) throw new Error('这位同学已经恢复。');
+      if (student.number && next.students.some(s => s.number === student.number)) throw new Error('这个学号已被其他同学使用，请先修改重复学号再撤销。');
+      next.students.splice(Math.min(deleted.index, next.students.length), 0, student);
+      next.tasks.forEach(t => {
+        const membership = deleted.memberships.find(m => m.taskId === t.id);
+        if (membership && !t.studentIds.includes(student.id)) {
+          t.studentIds.splice(Math.min(membership.position, t.studentIds.length), 0, student.id);
+          if (membership.submitted) t.submitted[student.id] = membership.submitted;
+        } else if (!membership && !t.archived && !student.archived && !t.studentIds.includes(student.id)) t.studentIds.push(student.id);
+      });
+    } else throw new Error('无法恢复这条删除记录。');
+    return validateState(next);
+  }
   function validateState(value) {
     const fail = () => { throw new Error('备份文件格式不正确，请选择本应用导出的完整备份。'); };
     const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(id) && !['__proto__','constructor','prototype'].includes(id);
@@ -118,5 +161,5 @@
     state.tasks[1].studentIds.slice(0, 17).forEach(id => { state.tasks[1].submitted[id] = new Date().toISOString(); });
     state.activeTaskId = state.tasks[0].id; return state;
   }
-  return { VERSION, KEY, uid, emptyState, demoState, genderLabels, normalizeGender, parseCSV, parseRoster, taskStudents, stats, filterStudents, makeTask, validateState, toCSV };
+  return { VERSION, KEY, uid, emptyState, demoState, genderLabels, normalizeGender, parseCSV, parseRoster, taskStudents, stats, filterStudents, makeTask, removeTask, removeStudent, restoreDeleted, validateState, toCSV };
 });

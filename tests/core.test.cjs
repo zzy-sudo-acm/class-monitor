@@ -59,3 +59,44 @@ test('CSV 保留中文与逗号引号，并中和表格公式',()=>{
   assert.ok(text.startsWith('\uFEFF'));assert.ok(text.includes('"王,小""明"'));assert.ok(text.includes('"\'=HYPERLINK'));
   assert.deepEqual(C.parseCSV(text).slice(0,2),[['学号','姓名'],['01','王,小"明']]);
 });
+test('删除事项仅移除该事项，不影响名单与其他提交',()=>{
+  const state=C.demoState(), snapshot=JSON.stringify(state);
+  const result=C.removeTask(state,state.activeTaskId);
+  assert.equal(result.state.tasks.length,2);assert.equal(result.state.students.length,32);
+  assert.equal(C.stats(result.state,result.state.tasks[0]).done,17);
+  assert.equal(JSON.stringify(state),snapshot);
+  assert.deepEqual(C.restoreDeleted(result.state,result.deleted),state);
+});
+test('删除最后一个事项后仍保留名单，可重新创建',()=>{
+  const state=C.demoState();state.tasks=state.tasks.slice(0,1);
+  const result=C.removeTask(state,state.activeTaskId);
+  assert.equal(result.state.activeTaskId,null);assert.equal(result.state.tasks.length,0);
+  assert.equal(C.makeTask(result.state,'新事项').studentIds.length,32);
+  assert.doesNotThrow(()=>C.validateState(result.state));
+});
+test('删除同学清理所有事项中的引用与提交，撤销完整恢复',()=>{
+  const state=C.demoState(), student=state.students[0], snapshot=JSON.stringify(state);
+  const result=C.removeStudent(state,student.id);
+  assert.equal(result.state.students.length,31);
+  result.state.tasks.forEach(t=>{assert.ok(!t.studentIds.includes(student.id));assert.ok(!Object.hasOwn(t.submitted,student.id));});
+  assert.equal(C.stats(result.state,result.state.tasks[0]).done,23);
+  assert.equal(JSON.stringify(state),snapshot);
+  assert.deepEqual(C.restoreDeleted(result.state,result.deleted),state);
+});
+test('撤销删除不覆盖期间其他同学的提交变化',()=>{
+  const state=C.demoState(), removed=state.students[0], other=state.students[2];
+  const result=C.removeStudent(state,removed.id);
+  const at=new Date().toISOString();result.state.tasks[0].submitted[other.id]=at;
+  const restored=C.restoreDeleted(result.state,result.deleted);
+  assert.equal(restored.tasks[0].submitted[other.id],at);
+  assert.equal(restored.tasks[0].submitted[removed.id],state.tasks[0].submitted[removed.id]);
+  assert.equal(C.stats(restored,restored.tasks[0]).done,25);
+});
+test('旧版归档备份可恢复，归档事项也可删除',()=>{
+  const state=C.demoState();state.tasks[0].archived=true;state.students[0].archived=true;
+  const loaded=C.validateState(JSON.parse(JSON.stringify(state)));
+  const result=C.removeTask(loaded,loaded.activeTaskId);
+  assert.equal(result.state.tasks.length,2);
+  assert.equal(C.restoreDeleted(result.state,result.deleted).tasks[0].archived,true);
+  assert.throws(()=>C.removeTask(state,'missing'),/已被删除/);
+});

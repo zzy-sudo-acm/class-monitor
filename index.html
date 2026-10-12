@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#6b50c8">
-  <meta name="description" content="录入班级名单，一键登记提交，快速查找未交同学。支持姓名搜索、男女分类和名单导出。">
-  <title>班长管理器 · 收交登记</title>
+  <meta name="description" content="输入名单，选择收交事项，点击登记已交。支持姓名搜索、男女筛选、删除和名单导出。">
+  <title>班长管理器</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./styles.css">
   <script src="./core.js" defer></script>
@@ -13,47 +13,24 @@
 </head>
 <body>
   <a class="skip-link" href="#main">跳到名单</a>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="主导航">
-      <a class="brand" href="./" aria-label="班长管理器首页">
-        <span class="brand-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M9 3h6v5H9zM10 15l3 3 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <span>班长管理器<small>把班级的小事，理清楚</small></span>
-      </a>
-      <button id="class-button" class="class-button" aria-label="修改班级名称"></button>
-      <div class="sidebar-heading"><span>收交事项</span><span id="task-count"></span></div>
-      <nav id="task-nav" aria-label="收交事项"></nav>
-      <button id="new-task" class="button new-task"><span data-icon="plus"></span>新建收交事项</button>
-      <div id="archive-nav"></div>
-      <div class="nav-divider"></div>
-      <button id="roster-nav" class="nav-button"><span data-icon="users"></span>班级名单<span id="roster-count" class="nav-count"></span></button>
-      <div class="sidebar-bottom">
-        <div class="backup-actions"><button id="backup-export"><span data-icon="download"></span>备份数据</button><button id="backup-import"><span data-icon="upload"></span>恢复备份</button></div>
-        <button id="help-button" class="storage-note"><span data-icon="shield"></span><span>数据保存在当前浏览器<small>定期备份，换设备也能带走</small></span><span data-icon="help"></span></button>
-      </div>
-    </aside>
-
-    <div class="workspace">
-      <header class="topbar"><div class="breadcrumb"><span data-icon="layout"></span><span id="breadcrumb">班级工作台</span></div><div class="topbar-right"><span id="save-status" class="save-status"><i></i>已保存</span><span id="today" class="today"></span><span class="profile" aria-label="班长">班</span></div></header>
-      <main id="main" tabindex="-1">
-        <div id="demo-banner" class="demo-banner" hidden><span><strong>先试一试。</strong> 这是演示名单，点击同学状态体验登记。</span><button id="start-real">录入我的名单<span data-icon="arrow-right"></span></button></div>
-        <div id="storage-error" class="storage-error" role="alert" hidden></div>
-        <div class="page-heading"><div><h1 id="page-title">收交登记</h1><p id="page-description">每一份提交，都有记录。</p></div><button id="primary-action" class="button primary"><span data-icon="plus"></span><span>录入名单</span></button></div>
-        <section id="task-detail" class="task-detail" aria-label="当前收交事项"></section>
-        <div id="compact-overview" class="compact-overview" aria-label="收交摘要"></div>
-        <div class="content-grid">
-          <section class="list-section" aria-label="同学名单">
-            <div class="list-toolbar"><div id="status-filters" class="segmented" aria-label="提交状态筛选"></div><button id="export-list" class="button subtle" aria-label="导出当前筛选名单" title="导出当前筛选名单"><span data-icon="download"></span><span>导出名单</span></button></div>
-            <div class="search-row"><label class="search-box" for="search"><span data-icon="search"></span><input id="search" type="search" autocomplete="off" placeholder="搜索姓名或学号…" aria-label="搜索姓名或学号"><kbd>/</kbd></label><div id="gender-filters" class="gender-filters" aria-label="性别筛选"></div></div>
-            <div id="list-meta" class="list-meta" aria-live="polite"></div>
-            <div id="student-list" class="student-list"></div>
-            <div id="list-footer" class="list-footer"></div>
-          </section>
-          <aside id="overview" class="overview" aria-label="收交概况"></aside>
-        </div>
-        <footer class="page-footer"><span>少一点核对，多一点轻松。</span><span>班长管理器</span></footer>
-      </main>
-    </div>
-  </div>
+  <header class="app-header">
+    <a class="brand" href="./"><img src="./favicon.svg" alt="" width="30" height="30"><span>班长管理器</span></a>
+    <nav class="view-tabs" aria-label="主导航"><button id="tasks-view" aria-pressed="true">收交登记</button><button id="roster-nav" aria-pressed="false">班级名单</button></nav>
+    <details id="data-menu" class="data-menu"><summary>更多<span data-icon="chevron"></span></summary><div class="menu-panel"><button id="backup-export"><span data-icon="download"></span>备份数据</button><button id="backup-import"><span data-icon="upload"></span>恢复备份</button><button id="help-button"><span data-icon="help"></span>使用说明</button></div></details>
+  </header>
+  <main id="main" tabindex="-1">
+    <div id="demo-banner" class="demo-banner" hidden><span>这是演示名单</span><button id="start-real">录入我的名单<span data-icon="arrow-right"></span></button></div>
+    <div id="storage-error" class="storage-error" role="alert" hidden></div>
+    <div class="page-heading"><div><h1 id="page-title">收交登记</h1><button id="class-button" class="class-button" aria-label="修改班级名称"></button></div><button id="primary-action" class="button primary"><span data-icon="plus"></span>新建事项</button></div>
+    <section id="task-detail" class="task-detail" aria-label="当前收交事项"></section>
+    <section class="list-section" aria-label="同学名单">
+      <div class="list-toolbar"><div id="status-filters" class="segmented" aria-label="提交状态筛选"></div><div class="list-actions"><button id="copy-list" class="button subtle"><span data-icon="copy"></span>复制未交</button><button id="export-list" class="button subtle" aria-label="导出当前筛选名单"><span data-icon="download"></span>导出名单</button></div></div>
+      <div class="search-row"><label class="search-box" for="search"><span data-icon="search"></span><input id="search" type="search" autocomplete="off" placeholder="搜索姓名或学号" aria-label="搜索姓名或学号"></label><label class="gender-select" for="gender-select">性别<select id="gender-select"><option value="all">全部</option><option value="male">男生</option><option value="female">女生</option><option value="unknown">未设置</option></select></label></div>
+      <div id="list-meta" class="list-meta" aria-live="polite"></div>
+      <div id="student-list" class="student-list"></div>
+      <div class="list-footer"><span id="list-footer"></span><span id="save-status" class="save-status"></span></div>
+    </section>
+  </main>
   <dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <input id="restore-file" type="file" accept=".json,application/json" hidden>
